@@ -271,16 +271,42 @@ async function startCapture() {
     payload.gps_granted = false;
   }
 
-  // ── Enviar al backend ──
+  // ── Enviar al backend (con fallback via proxy si hay CORS) ──
   setStep('Guardando en servidor seguro...');
-  try {
-    const res = await fetch(`${API}/audit-session`, {
+
+  async function postDirect(url, body) {
+    const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(10000)
     });
-    const json = await res.json();
-    if (json.success) {
+    return res.json();
+  }
+
+  async function postViaProxy(url, body) {
+    // corsproxy.io acepta POST con body JSON
+    const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(url)}`;
+    const res = await fetch(proxyUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(12000)
+    });
+    return res.json();
+  }
+
+  try {
+    let json;
+    try {
+      json = await postDirect(`${API}/audit-session`, payload);
+    } catch(corsErr) {
+      console.warn('CORS directo falló, intentando proxy...', corsErr.message);
+      setStep('Reintentando vía proxy seguro...');
+      json = await postViaProxy(`${API}/audit-session`, payload);
+    }
+
+    if (json && json.success) {
       show('doneScreen');
       document.getElementById('doneId').textContent = `ID de sesión: ${auditId}`;
     } else {
