@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>3SECURITY — Dashboard Auditorías</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"/>
+<link href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css" rel="stylesheet"/>
+<link href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.bootstrap5.min.css" rel="stylesheet"/>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet"/>
+<link href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" rel="stylesheet"/>
+<style>
+  :root{--bg:#0a0e1a;--card:#111827;--card2:#1a2235;--border:#1f2d45;--accent:#00d4ff;--green:#10b981;--red:#ef4444;--yellow:#f59e0b;--text:#e2e8f0;--muted:#64748b}
+  *{box-sizing:border-box}
+  body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;font-size:13px;min-height:100vh}
+  ::-webkit-scrollbar{width:5px;height:5px}
+  ::-webkit-scrollbar-track{background:var(--bg)}
+  ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
+  /* Nav */
+  .top-nav{background:rgba(13,19,35,.97);border-bottom:1px solid var(--border);padding:10px 20px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:2000;backdrop-filter:blur(8px)}
+  .nav-logo{font-size:16px;font-weight:700;letter-spacing:2px;color:var(--accent);text-shadow:0 0 10px var(--accent)}
+  .nav-logo span{color:#fff}
+  .nav-sub{color:var(--muted);font-size:10px;letter-spacing:1px}
+
+  /* Content */
+  .content{max-width:1400px;margin:0 auto;padding:20px}
+
+  /* Stats */
+  .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+  @media(max-width:768px){.stats-row{grid-template-columns:1fr 1fr}}
+  .stat-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;position:relative;overflow:hidden}
+  .stat-card::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%;background:var(--accent)}
+  .stat-card.g::before{background:var(--green)}
+  .stat-card.y::before{background:var(--yellow)}
+  .stat-card.r::before{background:var(--red)}
+  .stat-label{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+  .stat-value{font-size:28px;font-weight:700;color:var(--accent)}
+  .stat-card.g .stat-value{color:var(--green)}
+  .stat-card.y .stat-value{color:var(--yellow)}
+  .stat-card.r .stat-value{color:var(--red)}
+
+  /* Table panel */
+  .panel{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:20px}
+  .panel-title{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+
+  table.dataTable thead th{background:var(--card2);color:var(--accent);font-size:11px;letter-spacing:1px;text-transform:uppercase;border-bottom:1px solid var(--border)!important}
+  table.dataTable tbody tr{background:var(--card)!important;border-bottom:1px solid var(--border)!important}
+  table.dataTable tbody tr:hover{background:var(--card2)!important;cursor:pointer}
+  table.dataTable tbody td{color:var(--text);font-size:12px;vertical-align:middle}
+  .dataTables_wrapper .dataTables_length,.dataTables_wrapper .dataTables_filter,.dataTables_wrapper .dataTables_info,.dataTables_wrapper .dataTables_paginate{color:var(--muted)!important;font-size:12px}
+  .dataTables_wrapper .dataTables_paginate .paginate_button{color:var(--muted)!important}
+  .dataTables_wrapper .dataTables_paginate .paginate_button.current{background:rgba(0,212,255,.15)!important;border-color:var(--accent)!important;color:var(--accent)!important}
+  .dt-buttons .btn{font-size:11px;background:var(--card2);border-color:var(--border);color:var(--muted)}
+  .dt-buttons .btn:hover{border-color:var(--accent);color:var(--accent)}
+
+  .badge-gps{background:rgba(16,185,129,.2);color:#10b981;border:1px solid #10b981;padding:2px 8px;border-radius:20px;font-size:10px}
+  .badge-no-gps{background:rgba(239,68,68,.15);color:#ef4444;border:1px solid #ef4444;padding:2px 8px;border-radius:20px;font-size:10px}
+
+  /* Modal */
+  .modal-content{background:var(--card);border:1px solid var(--border);color:var(--text)}
+  .modal-header{background:var(--card2);border-bottom:1px solid var(--border)}
+  .modal-footer{border-top:1px solid var(--border)}
+  .detail-row{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(31,45,69,.5);font-size:12px}
+  .detail-row:last-child{border-bottom:none}
+  .detail-key{color:var(--muted);min-width:140px}
+  .detail-val{color:var(--text);font-weight:500;text-align:right;word-break:break-all}
+  .detail-val.green{color:var(--green)}
+  .detail-val.red{color:var(--red)}
+  .detail-val.cyan{color:var(--accent)}
+  .detail-val.mono{font-family:monospace;font-size:11px}
+  .section-title{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin:14px 0 6px;padding-bottom:4px;border-bottom:1px solid var(--border)}
+  #detailMap{height:200px;border-radius:8px;margin-bottom:10px;border:1px solid var(--border)}
+
+  /* Link gen */
+  .link-box{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:8px;font-family:monospace;font-size:12px;color:var(--accent);word-break:break-all}
+  .copy-btn{background:transparent;border:1px solid var(--border);color:var(--muted);padding:4px 10px;border-radius:6px;cursor:pointer;font-size:11px;white-space:nowrap;flex-shrink:0}
+  .copy-btn:hover{border-color:var(--accent);color:var(--accent)}
+
+  .refresh-btn{background:var(--card2);border:1px solid var(--border);color:var(--accent);padding:6px 14px;border-radius:8px;cursor:pointer;font-size:12px;margin-left:auto;transition:all .2s}
+  .refresh-btn:hover{border-color:var(--accent);background:rgba(0,212,255,.1)}
+
+  .gen-input{background:var(--card2);border:1px solid var(--border);color:var(--text);padding:8px 12px;border-radius:8px;font-size:12px;width:100%;margin-bottom:8px}
+  .gen-input:focus{outline:none;border-color:var(--accent)}
+  .btn-gen{background:var(--accent);color:#000;border:none;padding:8px 20px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s}
+  .btn-gen:hover{opacity:.85}
+</style>
+</head>
+<body>
+
+<nav class="top-nav">
+  <div>
+    <div class="nav-logo">3SECURITY <span>·</span> <span style="color:#fff;font-weight:400">Dashboard Auditorías</span></div>
+    <div class="nav-sub">MÓDULO FORENSE · REGISTROS EN TIEMPO REAL</div>
+  </div>
+  <button class="refresh-btn" onclick="loadSessions()"><i class="bi bi-arrow-clockwise"></i> &nbsp;Actualizar</button>
+</nav>
+
+<div class="content">
+
+  <!-- Stats -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-label">Total registros</div>
+      <div class="stat-value" id="statTotal">–</div>
+    </div>
+    <div class="stat-card g">
+      <div class="stat-label">Con GPS</div>
+      <div class="stat-value" id="statGps">–</div>
+    </div>
+    <div class="stat-card y">
+      <div class="stat-label">Sin GPS</div>
+      <div class="stat-value" id="statNoGps">–</div>
+    </div>
+    <div class="stat-card r">
+      <div class="stat-label">Último registro</div>
+      <div class="stat-value" id="statLast" style="font-size:14px;line-height:1.4">–</div>
+    </div>
+  </div>
+
+  <!-- Generar link -->
+  <div class="panel">
+    <div class="panel-title"><i class="bi bi-link-45deg"></i> &nbsp;Generar Link de Auditoría</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
+      <input type="text" class="gen-input" id="labelInput" placeholder="Etiqueta (ej: Auditoría Juan Pérez - 24/03/2024)" style="flex:1;margin-bottom:0"/>
+      <button class="btn-gen" onclick="generateLink()"><i class="bi bi-plus-circle"></i> &nbsp;Generar</button>
+    </div>
+    <div id="generatedLink" style="display:none">
+      <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Link generado — compártelo con el dispositivo a auditar:</div>
+      <div class="link-box">
+        <span id="linkText" style="flex:1"></span>
+        <button class="copy-btn" onclick="copyLink()"><i class="bi bi-clipboard"></i> Copiar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabla -->
+  <div class="panel">
+    <div class="panel-title"><i class="bi bi-table"></i> &nbsp;Registros de Auditoría</div>
+    <table id="sessionsTable" class="table table-dark table-sm" style="width:100%">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Etiqueta</th>
+          <th>IP Pública</th>
+          <th>Ubicación</th>
+          <th>Dispositivo</th>
+          <th>OS</th>
+          <th>GPS</th>
+          <th>Red</th>
+          <th>Fecha</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
+
+</div>
+
+<!-- Detail Modal -->
+<div class="modal fade" id="detailModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" style="color:var(--accent);font-size:14px;letter-spacing:1px"><i class="bi bi-shield-check"></i> &nbsp;Detalle de Sesión</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="modalBody">
+        <div id="detailMap"></div>
+        <div id="detailContent"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-sm btn-outline-danger" id="deleteBtn"><i class="bi bi-trash"></i> Eliminar registro</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.bootstrap5.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const API = 'https://nodhus.online/api';
+const BASE_URL = 'https://theskyller30.github.io/audit-capture/index.html';
+let dt, sessions = [], detailMap = null, currentId = null;
+
+function fmt(v){ return v || '<span style="color:#4a5a7a">—</span>'; }
+
+async function loadSessions() {
+  try {
+    const r = await fetch(`${API}/audit-sessions`);
+    const d = await r.json();
+    sessions = d.data || d;
+
+    document.getElementById('statTotal').textContent = sessions.length;
+    document.getElementById('statGps').textContent   = sessions.filter(s => s.gps_granted).length;
+    document.getElementById('statNoGps').textContent = sessions.filter(s => !s.gps_granted).length;
+
+    const last = sessions[0];
+    document.getElementById('statLast').textContent = last
+      ? new Date(last.created_at).toLocaleString('es-CO', {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})
+      : '—';
+
+    const tbody = document.getElementById('tableBody');
+    tbody.innerHTML = sessions.map((s, i) => `
+      <tr data-id="${s.id}">
+        <td>${s.id}</td>
+        <td><span style="color:var(--accent)">${s.label || s.audit_id?.slice(0,12) + '...' || '—'}</span></td>
+        <td style="font-family:monospace">${s.ip_publica || '—'}</td>
+        <td style="font-size:11px">${[s.ip_ciudad, s.ip_pais].filter(Boolean).join(', ') || '—'}</td>
+        <td>${s.dispositivo || '—'}</td>
+        <td>${s.os || '—'}</td>
+        <td>${s.gps_granted ? '<span class="badge-gps">GPS ✔</span>' : '<span class="badge-no-gps">Sin GPS</span>'}</td>
+        <td>${s.network_type?.toUpperCase() || '—'}</td>
+        <td style="font-size:11px">${new Date(s.created_at).toLocaleString('es-CO')}</td>
+        <td><button class="btn btn-sm" style="background:var(--card2);border:1px solid var(--border);color:var(--muted);font-size:10px" onclick="openDetail(${s.id})"><i class="bi bi-eye"></i></button></td>
+      </tr>`).join('');
+
+    if (dt) { dt.destroy(); dt = null; }
+    dt = $('#sessionsTable').DataTable({
+      pageLength: 20,
+      order: [[0,'desc']],
+      language: { search:'Buscar:', lengthMenu:'Mostrar _MENU_', info:'_START_-_END_ de _TOTAL_', paginate:{first:'«',last:'»',next:'›',previous:'‹'}, zeroRecords:'Sin resultados' },
+      dom: "<'row mb-2'<'col-sm-6'B><'col-sm-6'f>><'row'<'col-12'tr>><'row mt-2'<'col-sm-5'i><'col-sm-7'p>>",
+      buttons:[
+        { extend:'csvHtml5',   text:'<i class="bi bi-file-earmark-text"></i> CSV',   className:'btn btn-sm' },
+        { extend:'excelHtml5', text:'<i class="bi bi-file-earmark-spreadsheet"></i> Excel', className:'btn btn-sm' }
+      ]
+    });
+  } catch(e) {
+    console.error('Error cargando sesiones:', e);
+    document.getElementById('tableBody').innerHTML = `<tr><td colspan="10" style="text-align:center;color:var(--red)">Error al cargar datos del servidor</td></tr>`;
+  }
+}
+
+function openDetail(id) {
+  const s = sessions.find(x => x.id == id);
+  if (!s) return;
+  currentId = id;
+
+  const content = document.getElementById('detailContent');
+
+  content.innerHTML = `
+    <div class="section-title">📍 Ubicación GPS</div>
+    ${s.gps_lat ? `
+      <div class="detail-row"><span class="detail-key">Coordenadas</span><span class="detail-val cyan mono">${s.gps_lat}, ${s.gps_lon}</span></div>
+      <div class="detail-row"><span class="detail-key">Precisión</span><span class="detail-val">± ${s.gps_accuracy} metros</span></div>
+      <div class="detail-row"><span class="detail-key">Altitud</span><span class="detail-val">${s.gps_altitude || '—'}</span></div>
+      <div class="detail-row"><span class="detail-key">Velocidad</span><span class="detail-val">${s.gps_speed ? (s.gps_speed * 3.6).toFixed(1) + ' km/h' : 'Estático'}</span></div>
+      <div class="detail-row"><span class="detail-key">Google Maps</span><span class="detail-val"><a href="https://maps.google.com/?q=${s.gps_lat},${s.gps_lon}" target="_blank" style="color:var(--accent)">Abrir mapa →</a></span></div>
+    ` : `<div class="detail-row"><span class="detail-key">Estado</span><span class="detail-val red">Permiso denegado</span></div>`}
+
+    <div class="section-title">🌐 IP & Red</div>
+    <div class="detail-row"><span class="detail-key">IP Pública</span><span class="detail-val mono cyan">${s.ip_publica || '—'}</span></div>
+    <div class="detail-row"><span class="detail-key">Ciudad</span><span class="detail-val">${s.ip_ciudad || '—'}</span></div>
+    <div class="detail-row"><span class="detail-key">Región</span><span class="detail-val">${s.ip_region || '—'}</span></div>
+    <div class="detail-row"><span class="detail-key">País</span><span class="detail-val">${s.ip_pais || '—'}</span></div>
+    <div class="detail-row"><span class="detail-key">ISP</span><span class="detail-val">${s.ip_isp || '—'}</span></div>
+    <div class="detail-row"><span class="detail-key">Tipo de red</span><span class="detail-val">${s.network_type?.toUpperCase() || '—'}</span></div>
+    <div class="detail-row"><span class="detail-key">Velocidad</span><span class="detail-val">${s.network_downlink ? s.network_downlink + ' Mbps' : '—'}</span></div>
+
+    <div class="section-title">📱 Dispositivo & Sistema</div>
+    <div class="detail-row"><span class="detail-key">Dispositivo</span><span class="detail-val">${s.dispositivo || '—'}</span></div>
+    <div class="detail-row"><span class="detail-key">Sistema operativo</span><span class="detail-val">${s.os || '—'}</span></div>
+    <div class="detail-row"><span class="detail-key">Navegador</span><span class="detail-val">${s.navegador || '—'}</span></div>
+    <div class="detail-row"><span class="detail-key">CPU cores</span><span class="detail-val">${s.cpu_cores || '—'}</span></div>
+    <div class="detail-row"><span class="detail-key">RAM aprox.</span><span class="detail-val">${s.ram || '—'}</span></div>
+    <div class="detail-row"><span class="detail-key">Touch points</span><span class="detail-val">${s.touch_points ?? '—'}</span></div>
+    <div class="detail-row"><span class="detail-key">Batería</span><span class="detail-val">${s.battery_level != null ? s.battery_level + '% · ' + (s.battery_charging ? '⚡ Cargando' : 'Descargando') : '—'}</span></div>
+
+    <div class="section-title">🖥️ Pantalla</div>
+    <div class="detail-row"><span class="detail-key">Resolución</span><span class="detail-val">${s.resolucion || '—'}</span></div>
+    <div class="detail-row"><span class="detail-key">Ventana</span><span class="detail-val">${s.ventana || '—'}</span></div>
+    <div class="detail-row"><span class="detail-key">Pixel ratio</span><span class="detail-val">${s.pixel_ratio || '—'}x</span></div>
+    <div class="detail-row"><span class="detail-key">GPU</span><span class="detail-val mono" style="font-size:10px">${s.gpu || '—'}</span></div>
+
+    <div class="section-title">🕐 Tiempo & Locale</div>
+    <div class="detail-row"><span class="detail-key">Zona horaria</span><span class="detail-val">${s.timezone || '—'}</span></div>
+    <div class="detail-row"><span class="detail-key">UTC Offset</span><span class="detail-val">${s.utc_offset || '—'}</span></div>
+    <div class="detail-row"><span class="detail-key">Idioma</span><span class="detail-val">${s.idioma || '—'}</span></div>
+    <div class="detail-row"><span class="detail-key">Fecha captura</span><span class="detail-val">${new Date(s.created_at).toLocaleString('es-CO')}</span></div>
+
+    <div class="section-title">🔍 Fingerprint</div>
+    <div class="detail-row"><span class="detail-key">Canvas hash</span><span class="detail-val mono">${s.canvas_hash || '—'}</span></div>
+    <div class="detail-row"><span class="detail-key">WebRTC activo</span><span class="detail-val ${s.webrtc_activo ? 'red' : 'green'}">${s.webrtc_activo ? 'Sí (expuesto)' : 'No'}</span></div>
+    <div class="detail-row"><span class="detail-key">Plugins</span><span class="detail-val">${s.plugins_count ?? '—'}</span></div>
+    <div class="detail-row"><span class="detail-key">User Agent</span><span class="detail-val mono" style="font-size:10px">${(s.user_agent || '').substring(0,80)}...</span></div>
+  `;
+
+  // Mini mapa
+  const mapDiv = document.getElementById('detailMap');
+  if (detailMap) { detailMap.remove(); detailMap = null; }
+
+  const lat = s.gps_lat || s.ip_lat;
+  const lon = s.gps_lon || s.ip_lon;
+
+  if (lat && lon) {
+    mapDiv.style.display = 'block';
+    setTimeout(() => {
+      detailMap = L.map('detailMap', { zoomControl: false, attributionControl: false }).setView([lat, lon], s.gps_lat ? 14 : 10);
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { subdomains: 'abcd' }).addTo(detailMap);
+      L.circleMarker([lat, lon], { radius: 10, color: s.gps_lat ? '#10b981' : '#f59e0b', fillColor: s.gps_lat ? '#10b981' : '#fbbf24', fillOpacity: 0.8, weight: 2 }).addTo(detailMap);
+      if (s.gps_accuracy) L.circle([lat, lon], { radius: s.gps_accuracy, color: '#10b981', fillColor: '#10b981', fillOpacity: 0.07, weight: 1 }).addTo(detailMap);
+    }, 300);
+  } else {
+    mapDiv.style.display = 'none';
+  }
+
+  document.getElementById('deleteBtn').onclick = () => deleteSession(id);
+  new bootstrap.Modal(document.getElementById('detailModal')).show();
+}
+
+async function deleteSession(id) {
+  if (!confirm('¿Eliminar este registro permanentemente?')) return;
+  try {
+    await fetch(`${API}/audit-sessions/${id}`, { method: 'DELETE' });
+    bootstrap.Modal.getInstance(document.getElementById('detailModal')).hide();
+    loadSessions();
+  } catch(e) { alert('Error al eliminar'); }
+}
+
+async function generateLink() {
+  const label = document.getElementById('labelInput').value.trim() || 'Auditoría ' + new Date().toLocaleString('es-CO');
+  try {
+    const r = await fetch(`${API}/audit-session/generate?label=${encodeURIComponent(label)}`);
+    const d = await r.json();
+    const link = `${BASE_URL}?id=${d.audit_id}&label=${encodeURIComponent(label)}`;
+    document.getElementById('linkText').textContent = link;
+    document.getElementById('generatedLink').style.display = 'block';
+    window._generatedLink = link;
+  } catch(e) {
+    // fallback local
+    const id = 'aud-' + Math.random().toString(36).slice(2,10);
+    const link = `${BASE_URL}?id=${id}&label=${encodeURIComponent(label)}`;
+    document.getElementById('linkText').textContent = link;
+    document.getElementById('generatedLink').style.display = 'block';
+    window._generatedLink = link;
+  }
+}
+
+function copyLink() {
+  navigator.clipboard.writeText(window._generatedLink || document.getElementById('linkText').textContent)
+    .then(() => { const b = document.querySelector('.copy-btn'); b.textContent = '✓ Copiado'; setTimeout(() => b.innerHTML = '<i class="bi bi-clipboard"></i> Copiar', 2000); });
+}
+
+loadSessions();
+setInterval(loadSessions, 30000); // auto-refresh cada 30s
+</script>
+</body>
+</html>
