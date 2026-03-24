@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>3SECURITY — Verificación de Dispositivo</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+  :root {
+    --bg:#0a0e1a; --card:#111827; --card2:#1a2235;
+    --border:#1f2d45; --accent:#3b82f6; --green:#10b981;
+    --red:#ef4444; --yellow:#f59e0b; --text:#e2e8f0; --muted:#64748b;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+
+  .card{background:var(--card);border:1px solid var(--border);border-radius:16px;max-width:480px;width:100%;padding:32px;box-shadow:0 20px 60px rgba(0,0,0,0.5)}
+
+  .logo{display:flex;align-items:center;gap:12px;margin-bottom:24px}
+  .logo-icon{width:48px;height:48px;background:linear-gradient(135deg,#1d4ed8,#3b82f6);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:24px;box-shadow:0 0 20px rgba(59,130,246,0.4)}
+  .logo-name{font-size:18px;font-weight:700;color:#fff;letter-spacing:1px}
+  .logo-sub{font-size:11px;color:var(--muted)}
+
+  h2{font-size:20px;font-weight:700;color:#fff;margin-bottom:8px}
+  .subtitle{font-size:13px;color:var(--muted);margin-bottom:24px;line-height:1.6}
+
+  .consent-box{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:20px}
+  .consent-title{font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+  .consent-item{display:flex;align-items:flex-start;gap:8px;margin-bottom:8px;font-size:12px;color:var(--text);line-height:1.5}
+  .consent-item:last-child{margin-bottom:0}
+  .ci{color:var(--accent);flex-shrink:0;margin-top:1px}
+
+  .checkbox-row{display:flex;align-items:flex-start;gap:10px;margin-bottom:20px;cursor:pointer}
+  .checkbox-row input{width:16px;height:16px;accent-color:var(--accent);flex-shrink:0;margin-top:2px;cursor:pointer}
+  .checkbox-row label{font-size:12px;color:var(--text);line-height:1.5;cursor:pointer}
+
+  .btn-accept{width:100%;padding:14px;background:linear-gradient(135deg,#1d4ed8,#3b82f6);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;letter-spacing:0.5px;transition:all .2s;box-shadow:0 4px 20px rgba(59,130,246,0.35)}
+  .btn-accept:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 6px 24px rgba(59,130,246,0.5)}
+  .btn-accept:disabled{opacity:0.4;cursor:not-allowed;transform:none}
+
+  .footer-note{text-align:center;font-size:11px;color:var(--muted);margin-top:16px;line-height:1.6}
+
+  /* Loading */
+  #loadingScreen{display:none;text-align:center;padding:20px 0}
+  .spinner{width:48px;height:48px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 16px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .loading-text{font-size:14px;color:var(--accent);letter-spacing:1px}
+  .loading-step{font-size:12px;color:var(--muted);margin-top:6px}
+
+  /* Done */
+  #doneScreen{display:none;text-align:center;padding:10px 0}
+  .done-icon{font-size:56px;margin-bottom:16px}
+  .done-title{font-size:20px;font-weight:700;color:var(--green);margin-bottom:8px}
+  .done-sub{font-size:13px;color:var(--muted);line-height:1.6}
+  .done-id{font-size:11px;font-family:monospace;color:var(--muted);margin-top:12px;background:var(--card2);padding:6px 12px;border-radius:6px;display:inline-block}
+
+  /* Error */
+  #errorScreen{display:none;text-align:center;padding:10px 0}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">
+    <div class="logo-icon">🛡️</div>
+    <div>
+      <div class="logo-name">3SECURITY</div>
+      <div class="logo-sub">Auditoría Forense de Dispositivo</div>
+    </div>
+  </div>
+
+  <!-- Pantalla de consentimiento -->
+  <div id="consentScreen">
+    <h2>Verificación de seguridad requerida</h2>
+    <p class="subtitle">Para completar la auditoría de seguridad de su dispositivo, necesitamos recolectar información técnica. A continuación se detalla todo lo que se recopilará:</p>
+
+    <div class="consent-box">
+      <div class="consent-title">📋 Datos que se recolectarán</div>
+      <div class="consent-item"><span class="ci">📍</span>Ubicación GPS (latitud, longitud, precisión)</div>
+      <div class="consent-item"><span class="ci">🌐</span>Dirección IP pública y geolocalización por IP</div>
+      <div class="consent-item"><span class="ci">📱</span>Modelo de dispositivo, sistema operativo y navegador</div>
+      <div class="consent-item"><span class="ci">🔋</span>Nivel y estado de carga de la batería</div>
+      <div class="consent-item"><span class="ci">📶</span>Tipo de conexión de red (WiFi, 4G, 5G, etc.)</div>
+      <div class="consent-item"><span class="ci">🖥️</span>Resolución de pantalla, GPU y características de hardware</div>
+      <div class="consent-item"><span class="ci">🕐</span>Zona horaria, idioma configurado y hora local</div>
+      <div class="consent-item"><span class="ci">🔒</span>Huella de navegador (canvas fingerprint)</div>
+    </div>
+
+    <label class="checkbox-row">
+      <input type="checkbox" id="consentCheck" onchange="toggleBtn()"/>
+      <label for="consentCheck">He leído y acepto que se recopile la información técnica listada anteriormente con fines exclusivos de auditoría forense de seguridad.</label>
+    </label>
+
+    <button class="btn-accept" id="acceptBtn" disabled onclick="startCapture()">
+      ✓ &nbsp;Aceptar y continuar verificación
+    </button>
+
+    <div class="footer-note">
+      Los datos son almacenados de forma segura y utilizados<br/>únicamente para el proceso de auditoría autorizado.<br/>
+      <strong style="color:var(--text)">3SECURITY · Serpomar S.A.S</strong>
+    </div>
+  </div>
+
+  <!-- Pantalla de carga -->
+  <div id="loadingScreen">
+    <div class="spinner"></div>
+    <div class="loading-text">Recopilando información...</div>
+    <div class="loading-step" id="loadStep">Iniciando módulos de análisis</div>
+  </div>
+
+  <!-- Pantalla de éxito -->
+  <div id="doneScreen">
+    <div class="done-icon">✅</div>
+    <div class="done-title">Verificación completada</div>
+    <div class="done-sub">La información de su dispositivo ha sido registrada correctamente. El equipo de auditoría procesará los resultados.</div>
+    <div class="done-id" id="doneId"></div>
+  </div>
+
+  <!-- Pantalla de error -->
+  <div id="errorScreen">
+    <div style="font-size:48px;margin-bottom:16px">⚠️</div>
+    <div style="font-size:18px;font-weight:700;color:var(--red);margin-bottom:8px">Error al guardar</div>
+    <div style="font-size:13px;color:var(--muted)" id="errorMsg">Ocurrió un problema al conectar con el servidor.</div>
+  </div>
+</div>
+
+<script>
+const API = 'https://nodhus.online/api';
+
+function toggleBtn() {
+  document.getElementById('acceptBtn').disabled = !document.getElementById('consentCheck').checked;
+}
+
+function show(id) {
+  ['consentScreen','loadingScreen','doneScreen','errorScreen'].forEach(s => {
+    document.getElementById(s).style.display = s === id ? 'block' : 'none';
+  });
+}
+
+function setStep(txt) {
+  document.getElementById('loadStep').textContent = txt;
+}
+
+function getAuditId() {
+  const params = new URLSearchParams(window.location.search);
+  return params.get('id') || ('audit-' + Math.random().toString(36).slice(2,10));
+}
+
+function parseUA(ua) {
+  let device = 'Desktop', os = 'Desconocido', browser = 'Desconocido', bVer = '';
+  if (/iPhone/.test(ua))        device = 'iPhone';
+  else if (/iPad/.test(ua))     device = 'iPad';
+  else if (/Android/.test(ua))  device = 'Android';
+  else if (/Windows/.test(ua))  device = 'PC Windows';
+  else if (/Mac/.test(ua))      device = 'Mac';
+
+  if (/Windows NT 10/.test(ua))           os = 'Windows 10/11';
+  else if (/Mac OS X/.test(ua))           os = 'macOS ' + (ua.match(/Mac OS X ([^ )]+)/)?.[1]?.replace(/_/g,'.') || '');
+  else if (/Android ([0-9.]+)/.test(ua))  os = 'Android ' + ua.match(/Android ([0-9.]+)/)[1];
+  else if (/iPhone OS ([0-9_]+)/.test(ua)) os = 'iOS ' + ua.match(/iPhone OS ([0-9_]+)/)[1].replace(/_/g,'.');
+  else if (/iPad.*OS ([0-9_]+)/.test(ua)) os = 'iPadOS ' + ua.match(/OS ([0-9_]+)/)[1].replace(/_/g,'.');
+
+  if (/Edg\/([0-9.]+)/.test(ua))      { browser = 'Edge';    bVer = ua.match(/Edg\/([0-9.]+)/)[1]; }
+  else if (/Chrome\/([0-9.]+)/.test(ua)) { browser = 'Chrome';  bVer = ua.match(/Chrome\/([0-9.]+)/)[1]; }
+  else if (/Firefox\/([0-9.]+)/.test(ua)){ browser = 'Firefox'; bVer = ua.match(/Firefox\/([0-9.]+)/)[1]; }
+  else if (/Safari\//.test(ua))          { browser = 'Safari';  bVer = ua.match(/Version\/([0-9.]+)/)?.[1] || ''; }
+
+  return { device, os, navegador: `${browser} ${bVer}`.trim() };
+}
+
+async function startCapture() {
+  show('loadingScreen');
+  const auditId = getAuditId();
+  const ua      = navigator.userAgent;
+  const uaInfo  = parseUA(ua);
+  const conn    = navigator.connection || navigator.mozConnection;
+  const payload = { audit_id: auditId, consented: true, user_agent: ua, ...uaInfo };
+
+  // Label desde URL
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('label')) payload.label = params.get('label');
+
+  // ── IP ──
+  setStep('Obteniendo información de red...');
+  try {
+    const r = await fetch('https://ipapi.co/json/', { signal: AbortSignal.timeout(6000) });
+    const d = await r.json();
+    Object.assign(payload, {
+      ip_publica: d.ip, ip_ciudad: d.city, ip_region: d.region,
+      ip_pais: d.country_name, ip_isp: d.org,
+      ip_lat: String(d.latitude), ip_lon: String(d.longitude), ip_timezone: d.timezone
+    });
+  } catch(e) {
+    try {
+      const r2 = await fetch('https://ip-api.com/json/', { signal: AbortSignal.timeout(6000) });
+      const d2 = await r2.json();
+      Object.assign(payload, {
+        ip_publica: d2.query, ip_ciudad: d2.city, ip_region: d2.regionName,
+        ip_pais: d2.country, ip_isp: d2.isp,
+        ip_lat: String(d2.lat), ip_lon: String(d2.lon), ip_timezone: d2.timezone
+      });
+    } catch(e2) {}
+  }
+
+  // ── Hardware ──
+  setStep('Leyendo hardware del dispositivo...');
+  payload.cpu_cores   = navigator.hardwareConcurrency || null;
+  payload.ram         = navigator.deviceMemory ? navigator.deviceMemory + ' GB' : null;
+  payload.touch_points = navigator.maxTouchPoints || 0;
+  payload.resolucion  = `${screen.width}x${screen.height}`;
+  payload.ventana     = `${window.innerWidth}x${window.innerHeight}`;
+  payload.pixel_ratio = String(window.devicePixelRatio || 1);
+  payload.color_depth = String(screen.colorDepth);
+  payload.orientacion = screen.orientation?.type || (window.innerWidth > window.innerHeight ? 'landscape' : 'portrait');
+  payload.webrtc_activo = typeof RTCPeerConnection !== 'undefined';
+  payload.plugins_count = navigator.plugins?.length || 0;
+
+  try {
+    const gl  = document.createElement('canvas').getContext('webgl');
+    const ext = gl?.getExtension('WEBGL_debug_renderer_info');
+    if (ext) payload.gpu = gl.getParameter(ext.UNMASKED_RENDERER_WEBGL)?.substring(0,150);
+  } catch(e) {}
+
+  try {
+    const c = document.createElement('canvas');
+    const ctx = c.getContext('2d');
+    ctx.textBaseline = 'top'; ctx.font = '14px Arial';
+    ctx.fillText('3security🛡️', 2, 2);
+    payload.canvas_hash = c.toDataURL().slice(-30);
+  } catch(e) {}
+
+  // ── Batería ──
+  setStep('Leyendo batería...');
+  try {
+    const bat = await navigator.getBattery?.();
+    if (bat) {
+      payload.battery_level    = Math.round(bat.level * 100);
+      payload.battery_charging = bat.charging;
+    }
+  } catch(e) {}
+
+  // ── Red ──
+  if (conn) {
+    payload.network_type     = conn.effectiveType || null;
+    payload.network_downlink = conn.downlink ? String(conn.downlink) : null;
+    payload.network_rtt      = conn.rtt ? String(conn.rtt) : null;
+    payload.save_data        = conn.saveData || false;
+  }
+
+  // ── Locale ──
+  setStep('Capturando zona horaria e idioma...');
+  const tz = Intl.DateTimeFormat().resolvedOptions();
+  payload.timezone   = tz.timeZone;
+  payload.idioma     = navigator.language;
+  payload.idiomas    = (navigator.languages || []).slice(0,5).join(', ');
+  payload.utc_offset = `UTC${-(new Date().getTimezoneOffset()/60) >= 0 ? '+' : ''}${-(new Date().getTimezoneOffset()/60)}`;
+  payload.referer    = document.referrer || null;
+
+  // ── GPS ──
+  setStep('Solicitando ubicación GPS...');
+  try {
+    const pos = await new Promise((res, rej) =>
+      navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: true, timeout: 15000 })
+    );
+    payload.gps_granted  = true;
+    payload.gps_lat      = pos.coords.latitude;
+    payload.gps_lon      = pos.coords.longitude;
+    payload.gps_accuracy = pos.coords.accuracy;
+    payload.gps_altitude = pos.coords.altitude;
+    payload.gps_speed    = pos.coords.speed;
+  } catch(e) {
+    payload.gps_granted = false;
+  }
+
+  // ── Enviar al backend ──
+  setStep('Guardando en servidor seguro...');
+  try {
+    const res = await fetch(`${API}/audit-session`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const json = await res.json();
+    if (json.success) {
+      show('doneScreen');
+      document.getElementById('doneId').textContent = `ID de sesión: ${auditId}`;
+    } else {
+      throw new Error(JSON.stringify(json));
+    }
+  } catch(e) {
+    show('errorScreen');
+    document.getElementById('errorMsg').textContent = 'Error: ' + e.message;
+    console.error(e);
+  }
+}
+</script>
+</body>
+</html>
